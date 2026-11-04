@@ -1,8 +1,9 @@
 <?php
-// student/academic-information.php
+// root/academic-information.php
 // Shows: Enrollment Details (with adviser) + My Subjects
-// Redirects to student-enrollment.php if the student has no enrollment record.
-require_once __DIR__ . '/../DB_Conn/config.php';
+// If the student has no enrollment record, an inline "Not Enrolled" panel
+// is shown with a link to student-enrollment.php (NO redirect — prevents loop).
+require_once __DIR__ . '/DB_Conn/config.php';
 
 if (session_status() === PHP_SESSION_NONE) {
     session_set_cookie_params([
@@ -14,7 +15,6 @@ if (session_status() === PHP_SESSION_NONE) {
     ]);
     session_start();
 }
-
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
@@ -66,7 +66,12 @@ function resolveTeacherNameFromJoin(array $row): string
         return $name;
     }
 
-    return trim((string) ($row['adviser'] ?? ''));
+    $surname = trim((string) ($row['surname'] ?? ''));
+    if ($surname !== '') {
+        return $surname;
+    }
+
+    return '—';
 }
 
 function fetchTeacherNameByAccount(PDO $pdo, string $account): string
@@ -174,14 +179,41 @@ if (!empty($_SESSION['account_number']) && is_string($_SESSION['account_number']
         $_SESSION = [];
         if (ini_get('session.use_cookies')) {
             $p = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $p['path'], $p['domain'], $p['secure'], $p['httponly']);
+            setcookie(
+                session_name(),
+                '',
+                time() - 42000,
+                $p['path'],
+                $p['domain'],
+                $p['secure'],
+                $p['httponly']
+            );
         }
         session_destroy();
+        header('Location: index.php');
+        exit;
     } else {
         $isLoggedIn = true;
     }
 }
 
+/* ------------------------------------------------------------
+   HARD GUARD — no session = no access
+   ------------------------------------------------------------ */
+if (!$isLoggedIn || !$user) {
+    header('Location: index.php');
+    exit;
+}
+
+/* ------------------------------------------------------------
+   CHECK ENROLLMENT STATUS (no redirect — use flag instead)
+   ------------------------------------------------------------ */
+$rawEnrollmentStatus = strtolower(trim((string) ($user['enrollment_status'] ?? '')));
+$isNotEnrolledStatus = ($rawEnrollmentStatus === 'not enrolled');
+
+/* ------------------------------------------------------------
+   DISPLAY NAME
+   ------------------------------------------------------------ */
 $displayName = '';
 if ($user) {
     $displayName = buildFullName(
@@ -243,12 +275,10 @@ if ($isLoggedIn && $user) {
 }
 
 /* ------------------------------------------------------------
-   NO RECORD AT ALL → redirect to the enrollment form
+   NO RECORD → set flag (NO redirect — prevents loop with
+   student-enrollment.php which redirects back here)
    ------------------------------------------------------------ */
-if ($isLoggedIn && $user && !$enrollmentRecord) {
-    header('Location: student-enrollment.php');
-    exit;
-}
+$needsEnrollment = $isNotEnrolledStatus || !$enrollmentRecord;
 
 /* Effective grade + section */
 $effectiveGrade = '';
@@ -265,8 +295,6 @@ if ($effectiveGrade === '' && !empty($user['grade_level'])) {
 
 /* ------------------------------------------------------------
    PENDING STATE
-   - enrolled_students.status == 'Pending'
-   - OR students.enrollment_status == 'Pending'
    ------------------------------------------------------------ */
 $recordStatusRaw = $enrollmentRecord
     ? strtolower(trim((string) ($enrollmentRecord['status'] ?? '')))
@@ -297,7 +325,7 @@ try {
 }
 
 /* ------------------------------------------------------------
-   FETCH ADVISER (advisory = 1)
+   FETCH ADVISER
    ------------------------------------------------------------ */
 $adviserName = '';
 $adviserAccount = '';
@@ -306,6 +334,7 @@ $adviserFetchErr = null;
 if (
     $isLoggedIn
     && $user
+    && !$needsEnrollment
     && $assignmentTable !== null
     && $effectiveGrade !== ''
     && $effectiveSection !== ''
@@ -314,6 +343,7 @@ if (
         $sql = "
             SELECT
                 at.adviser,
+                at.surname,
                 t.first_name  AS teacher_first,
                 t.middle_name AS teacher_middle,
                 t.surname     AS teacher_last
@@ -348,6 +378,7 @@ $subjectsFetchErr = null;
 if (
     $isLoggedIn
     && $user
+    && !$needsEnrollment
     && $assignmentTable !== null
     && $effectiveGrade !== ''
     && $effectiveSection !== ''
@@ -358,6 +389,7 @@ if (
                 at.id,
                 at.subject,
                 at.adviser,
+                at.surname,
                 at.grade_level,
                 at.section,
                 at.days,
@@ -439,7 +471,7 @@ unset($_SESSION['flash']['just_enrolled']);
             background-color: #1f2327;
             background-image:
                 linear-gradient(rgba(15, 23, 42, .18), rgba(15, 23, 42, .18)),
-                url('Colorful_Back_to_School_Stationery_Border.png');
+                url('https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/Colorful_Back_to_School_Stationery_Border.png');
             background-size: cover;
             background-position: center top;
             background-repeat: no-repeat;
@@ -449,6 +481,21 @@ unset($_SESSION['flash']['just_enrolled']);
             -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
             min-height: 100vh;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -2;
+            background-color: #0a1a33;
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-image: url("https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/desktop.jpg");
         }
 
         img,
@@ -477,52 +524,15 @@ unset($_SESSION['flash']['just_enrolled']);
             padding: 0 24px;
         }
 
-        /* NAV - CAMPUS LINK STYLE */
+        /* NAV */
         .nav {
             position: sticky;
             top: 0;
             z-index: 100;
             background: #08285f;
             border-bottom: 0;
-            /* Allow the dropdown to extend below the navbar without being clipped. */
             overflow: visible;
             isolation: isolate;
-        }
-
-        .nav::before,
-        .nav::after {
-            content: "";
-            position: absolute;
-            top: 0;
-            bottom: 0;
-            width: 250px;
-            z-index: -1;
-            pointer-events: none;
-        }
-
-        /* Left diagonal ribbon */
-        .nav::before {
-            left: -90px;
-            background:
-                linear-gradient(55deg,
-                    transparent 0 24%,
-                    #9b1536 24% 34%,
-                    #f8c324 34% 42%,
-                    #2058c8 42% 56%,
-                    transparent 56% 100%);
-        }
-
-        /* Right diagonal ribbon */
-        .nav::after {
-            right: -90px;
-            transform: scaleX(-1);
-            background:
-                linear-gradient(55deg,
-                    transparent 0 24%,
-                    #9b1536 24% 34%,
-                    #f8c324 34% 42%,
-                    #2058c8 42% 56%,
-                    transparent 56% 100%);
         }
 
         .nav-inner {
@@ -545,11 +555,14 @@ unset($_SESSION['flash']['just_enrolled']);
         }
 
         .logo-mark {
-            width: 112px;
-            height: 82px;
+            width: 191px;
+            height: 107px;
             flex-shrink: 0;
             display: grid;
             place-items: center;
+            overflow: hidden;
+            background: #08285f;
+            border-radius: 2px;
         }
 
         .logo-mark img {
@@ -557,10 +570,6 @@ unset($_SESSION['flash']['just_enrolled']);
             height: 100%;
             object-fit: contain;
             display: block;
-            /* Gives the existing blue logo the gold look of the reference header. */
-            filter: brightness(0) saturate(100%)
-                    invert(77%) sepia(90%) saturate(1070%)
-                    hue-rotate(355deg) brightness(103%) contrast(102%);
         }
 
         .logo-divider {
@@ -714,7 +723,6 @@ unset($_SESSION['flash']['just_enrolled']);
 
         /* PANEL */
         .panel {
-            /* Remove the large middle card/container while keeping its contents. */
             background: transparent;
             border: 0;
             border-radius: 0;
@@ -723,7 +731,7 @@ unset($_SESSION['flash']['just_enrolled']);
             margin: 30px 0 60px;
         }
 
-        /* CHANGED: Welcome card (Pending / New Student / Transferee) */
+        /* Welcome card */
         .welcome-card {
             display: flex;
             flex-direction: column;
@@ -795,7 +803,9 @@ unset($_SESSION['flash']['just_enrolled']);
             padding: 24px 20px;
             border-radius: var(--radius);
             border: 1px solid var(--line);
-            background: linear-gradient(135deg, #f8fafc, #eef2ff);
+            background: rgba(8, 40, 95, .72);
+            backdrop-filter: blur(0px);
+            -webkit-backdrop-filter: blur(0px);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -844,7 +854,7 @@ unset($_SESSION['flash']['just_enrolled']);
         }
 
         .enrolled-summary .summary-row .value.muted-value {
-            color: #f5f6f7;
+            color: #0781fa;
             font-weight: 500;
             font-style: italic;
         }
@@ -857,7 +867,7 @@ unset($_SESSION['flash']['just_enrolled']);
             padding: 3px 12px;
             border-radius: 999px;
             font-family: 'Inter', sans-serif;
-            font-size: 12.5px;
+            font-size: 13px;
             font-weight: 700;
             letter-spacing: .02em;
             line-height: 1.6;
@@ -866,13 +876,6 @@ unset($_SESSION['flash']['just_enrolled']);
         .status-pill.pending {
             background: #fef3c7;
             color: #92400e;
-            border: 1px solid #fde68a;
-        }
-
-        .status-pill.enrolled {
-            background: #dcfce7;
-            color: #166534;
-            border: 1px solid #bbf7d0;
         }
 
         /* SUBJECTS */
@@ -894,7 +897,7 @@ unset($_SESSION['flash']['just_enrolled']);
         .subjects-head h3 {
             font-size: 15px;
             font-weight: 700;
-            color: var(--text);
+            color: black;
             display: flex;
             align-items: center;
             gap: 8px;
@@ -908,39 +911,51 @@ unset($_SESSION['flash']['just_enrolled']);
         .subjects-count {
             font-size: 12px;
             color: var(--muted);
-            background: #f1f5f9;
-            border: 1px solid var(--line);
             padding: 3px 10px;
-            border-radius: 999px;
+            border-radius: 5px;
             font-weight: 600;
         }
 
-        .subjects-wrap {
+        .subjects-table-container {
+            width: 100%;
+            padding: 24px 20px;
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, .3);
+            background: rgba(8, 40, 95, .72);
+            backdrop-filter: blur(0px);
+            -webkit-backdrop-filter: blur(0px);
+            box-shadow: 0 14px 34px -14px rgba(0, 0, 0, .35);
+        }
+
+        .subjects-table-container .subjects-wrap {
             width: 100%;
             overflow-x: auto;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
             -webkit-overflow-scrolling: touch;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: transparent;
         }
 
         table.subjects {
             width: 100%;
             border-collapse: collapse;
             font-size: 14px;
+            background: transparent;
         }
 
         table.subjects thead {
-            background: #f1f5f9;
+            background: rgba(255, 255, 255, 0.1);
         }
 
         table.subjects th,
         table.subjects td {
             padding: 12px 16px;
             text-align: left;
-            border-bottom: 1px solid var(--line);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            color: #ffffff !important;
         }
 
         table.subjects th {
@@ -948,15 +963,20 @@ unset($_SESSION['flash']['just_enrolled']);
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: .08em;
-            color: #64748b;
+            color: rgba(255, 255, 255, 0.7) !important;
         }
 
         table.subjects tbody tr:last-child td {
             border-bottom: none;
         }
 
-        table.subjects tbody tr:hover {
-            background: #f8fafc;
+        .subjects-table-container table.subjects,
+        .subjects-table-container table.subjects :where(th, td, span, a, b, strong, i, em, code, p, div) {
+            color: #ffffff !important;
+        }
+
+        .subjects-table-container table.subjects th {
+            color: rgba(255, 255, 255, 0.7) !important;
         }
 
         .empty-subjects {
@@ -968,7 +988,7 @@ unset($_SESSION['flash']['just_enrolled']);
 
         .empty-subjects i {
             font-size: 28px;
-            color: #f8f9fa;
+            color: #cbd5e1;
             margin-bottom: 8px;
             display: block;
         }
@@ -982,6 +1002,63 @@ unset($_SESSION['flash']['just_enrolled']);
             word-break: break-all;
         }
 
+        /* NOT-ENROLLED CTA */
+        .not-enrolled-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 16px;
+            padding: 48px 24px;
+            border-radius: var(--radius);
+            border: 1px solid rgba(255, 255, 255, .25);
+            background: rgba(8, 40, 95, .72);
+            margin-top: 20px;
+        }
+
+        .not-enrolled-card .icon {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            font-size: 30px;
+            background: rgba(254, 243, 199, .15);
+            color: #fbbf24;
+        }
+
+        .not-enrolled-card h3 {
+            font-size: 20px;
+            font-weight: 800;
+            color: #fff;
+        }
+
+        .not-enrolled-card p {
+            font-size: 15px;
+            color: rgba(255, 255, 255, .8);
+            max-width: 460px;
+            line-height: 1.65;
+        }
+
+        .not-enrolled-card .btn-enroll {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 26px;
+            background: #3b82f6;
+            color: #fff !important;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            transition: background .18s, transform .18s;
+            text-decoration: none;
+        }
+
+        .not-enrolled-card .btn-enroll:hover {
+            background: #2563eb;
+            transform: translateY(-1px);
+        }
+
         /* SPINNER */
         .spinner-overlay {
             position: fixed;
@@ -993,8 +1070,8 @@ unset($_SESSION['flash']['just_enrolled']);
             justify-content: center;
             gap: 24px;
             background: rgba(10, 26, 51, 0.82);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(0px);
+            -webkit-backdrop-filter: blur(0px);
             color: #fff;
             opacity: 1;
             transition: opacity .4s ease;
@@ -1036,13 +1113,12 @@ unset($_SESSION['flash']['just_enrolled']);
             padding: 0 20px;
         }
 
-        /* MAKE ALL PAGE TEXT WHITE */
+        /* GLOBAL WHITE TEXT */
         body,
         body :where(h1, h2, h3, h4, h5, h6, p, span, div, a, button, label, strong, b, small, th, td, li, i, em, code) {
             color: #ffffff !important;
         }
 
-        /* Keep the dropdown readable while using white text. */
         .nav-dropdown {
             background: #08285f;
             border-color: rgba(255, 255, 255, .22);
@@ -1074,25 +1150,6 @@ unset($_SESSION['flash']['just_enrolled']);
             color: #ffffff !important;
         }
 
-        .enrolled-summary {
-            background: rgba(8, 40, 95, .72);
-            border-color: rgba(255, 255, 255, .3);
-        }
-
-        .subjects-wrap {
-            border-color: rgba(255, 255, 255, .3);
-        }
-
-        table.subjects thead,
-        table.subjects tbody tr:hover {
-            background: rgba(8, 40, 95, .72);
-        }
-
-        table.subjects th,
-        table.subjects td {
-            border-bottom-color: rgba(255, 255, 255, .25);
-        }
-
         .subjects-count,
         .welcome-card .account-box {
             background: rgba(8, 40, 95, .78);
@@ -1101,7 +1158,7 @@ unset($_SESSION['flash']['just_enrolled']);
 
         .status-pill.pending,
         .status-pill.enrolled {
-            color: #ffffff !important;
+            color: greenyellow !important;
         }
 
         /* RESPONSIVE */
@@ -1117,8 +1174,8 @@ unset($_SESSION['flash']['just_enrolled']);
             }
 
             .logo-mark {
-                width: 92px;
-                height: 70px;
+                width: 150px;
+                height: 84px;
             }
 
             .logo-text b {
@@ -1146,8 +1203,8 @@ unset($_SESSION['flash']['just_enrolled']);
             }
 
             .logo-mark {
-                width: 70px;
-                height: 58px;
+                width: 125px;
+                height: 70px;
             }
 
             .logo-text b {
@@ -1183,8 +1240,8 @@ unset($_SESSION['flash']['just_enrolled']);
             }
 
             .logo-mark {
-                width: 52px;
-                height: 46px;
+                width: 100px;
+                height: 56px;
             }
 
             .logo-text b {
@@ -1259,17 +1316,34 @@ unset($_SESSION['flash']['just_enrolled']);
             .spinner-overlay .spinner-sub {
                 font-size: 12.5px;
             }
+
+            .subjects-table-container {
+                padding: 18px 14px;
+            }
+
+            .not-enrolled-card {
+                padding: 32px 18px;
+            }
+
+            .not-enrolled-card .icon {
+                width: 60px;
+                height: 60px;
+                font-size: 26px;
+            }
+
+            .not-enrolled-card h3 {
+                font-size: 18px;
+            }
+
+            .not-enrolled-card p {
+                font-size: 14px;
+            }
         }
 
         @media (max-width: 400px) {
-            .nav::before,
-            .nav::after {
-                width: 150px;
-            }
-
             .logo-mark {
-                width: 44px;
-                height: 40px;
+                width: 88px;
+                height: 49px;
             }
 
             .logo-text b {
@@ -1281,11 +1355,47 @@ unset($_SESSION['flash']['just_enrolled']);
                 width: 40px;
                 height: 40px;
             }
+
+            .subjects-table-container {
+                padding: 14px 10px;
+            }
+        }
+
+        body.devtools-active {
+            background-color: #000 !important;
+            background-image: url('https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/inspect.png') !important;
+            background-position: center center !important;
+            background-repeat: no-repeat !important;
+            background-size: contain !important;
+            background-attachment: fixed !important;
+            overflow: hidden !important;
+        }
+
+        body.devtools-active>* {
+            visibility: hidden !important;
+        }
+
+        @media (max-width: 768px) {
+            body.devtools-active {
+                background-size: contain !important;
+                background-position: center center !important;
+                background-attachment: scroll !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body.devtools-active {
+                background-size: contain !important;
+                background-position: center center !important;
+                background-attachment: scroll !important;
+                padding: 16px !important;
+            }
         }
     </style>
 </head>
 
 <body>
+
     <?php if ($justEnrolled): ?>
         <div class="spinner-overlay" id="enrollSpinner">
             <div class="spinner"></div>
@@ -1298,21 +1408,22 @@ unset($_SESSION['flash']['just_enrolled']);
         <div class="container nav-inner">
             <a href="#" class="logo">
                 <div class="logo-mark">
-                    <img src="campuslink-logo.png"
+                    <img src="https://campuslink.villaruz-print-shop-and-general-merchandise.shop/Images/campuslink-logo-navy.png"
                         alt="Eguia National High School logo" onerror="this.style.display='none'">
                 </div>
                 <div class="logo-divider" aria-hidden="true"></div>
                 <div class="logo-text">
-                    <b>Campus Link</b>
+                    <b>CampusLink</b>
                     <span class="school-name">Eguia National High School</span>
                 </div>
             </a>
 
             <div class="nav-right">
-                <span class="page-label">Student Portal</span>
+                <span class="page-label">ACADEMIC INFORMATION </span>
 
                 <div class="nav-actions">
-                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false">
+                    <button class="nav-toggle" id="navToggle" aria-label="Buksan ang menu" aria-expanded="false"
+                        style="margin-right: 10px;">
                         <i class="fas fa-bars"></i>
                     </button>
 
@@ -1335,6 +1446,25 @@ unset($_SESSION['flash']['just_enrolled']);
                             <i class="fas fa-folder-open"></i> Master File
                         </a>
 
+                        <a href="#" role="menuitem" aria-disabled="true" tabindex="-1" onclick="return false;"
+                            style="opacity:.45; cursor:not-allowed; pointer-events:none; filter:grayscale(1); text-decoration:none;">
+                            <i class="fas fa-file-pen"></i> Assignment/Activities
+                        </a>
+
+                        <a href="#" role="menuitem" aria-disabled="true" tabindex="-1" onclick="return false;"
+                            style="opacity:.45; cursor:not-allowed; pointer-events:none; filter:grayscale(1); text-decoration:none;">
+                            <i class="fas fa-bullhorn"></i> Campus Updates
+                        </a>
+
+                        <a href="#" role="menuitem" aria-disabled="true" tabindex="-1" onclick="return false;"
+                            style="opacity:.45; cursor:not-allowed; pointer-events:none; filter:grayscale(1); text-decoration:none;">
+                            <i class="fas fa-star-half-stroke"></i> Evaluate Teachers
+                        </a>
+
+                        <a href="#" role="menuitem" aria-disabled="true" tabindex="-1" onclick="return false;"
+                            style="opacity:.45; cursor:not-allowed; pointer-events:none; filter:grayscale(1); text-decoration:none;">
+                            <i class="fas fa-mobile-screen-button"></i> Download App
+                        </a>
 
                         <div style="border-top: 1px solid var(--line); margin-top: 6px; padding-top: 6px;">
                             <a href="logout.php" role="menuitem" style="color: #b91c1c;">
@@ -1350,177 +1480,175 @@ unset($_SESSION['flash']['just_enrolled']);
     <main class="container">
         <?php if ($isLoggedIn && $user): ?>
             <?php if ($isPending): ?>
-                <?php /* CHANGED: Pending state → show welcome card only, hide enrollment details + subjects */ ?>
-                <section class="panel">
-                    <div class="welcome-card is-closed">
-                        <div class="welcome-icon"
-                            style="color: #b45309; background: #fef3c7; box-shadow: 0 12px 26px -14px rgba(245, 158, 11, 0.45);">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                        <h2>Enrollment Pending — Visit the Registrar's Office</h2>
-                        <p>
-                            Your enrollment request has been submitted and is currently
-                            <strong>pending approval</strong>. To complete your enrollment,
-                            please proceed to the <strong>Registrar's Office</strong> and bring
-                            your required documents for verification and approval.
-                        </p>
-                        <div class="account-box">
-                            <i class="fas fa-id-card"></i>
-                            Account No. <b><?php echo htmlspecialchars($user['account_number']); ?></b>
-                        </div>
-                    </div>
-                </section>
+
             <?php else: ?>
                 <section class="panel">
 
-                    <!-- ENROLLMENT DETAILS -->
-                    <div class="enrolled-summary">
-                        <h3>Enrollment Details</h3>
-
-                        <div class="summary-row">
-                            <span class="label">Account Number</span>
-                            <span class="dash">-</span>
-                            <span class="value"><?php echo htmlspecialchars($user['account_number'] ?? '—'); ?></span>
-                        </div>
-
-                        <div class="summary-row">
-                            <span class="label">Grade Level</span>
-                            <span class="dash">-</span>
-                            <span
-                                class="value"><?php echo htmlspecialchars($effectiveGrade !== '' ? $effectiveGrade : ($user['grade_level'] ?? '—')); ?></span>
-                        </div>
-
-                        <div class="summary-row">
-                            <span class="label">Section</span>
-                            <span class="dash">-</span>
-                            <span
-                                class="value"><?php echo htmlspecialchars($effectiveSection !== '' ? $effectiveSection : '—'); ?></span>
-                        </div>
-
-                        <div class="summary-row">
-                            <span class="label">Adviser</span>
-                            <span class="dash">-</span>
-                            <span class="value <?php echo $adviserName === '' ? 'muted-value' : ''; ?>">
-                                <?php
-                                if ($adviserName !== '') {
-                                    echo htmlspecialchars($adviserName);
-                                } elseif ($adviserFetchErr !== null) {
-                                    echo 'Unable to load';
-                                } else {
-                                    echo 'Not assigned yet';
-                                }
-                                ?>
-                            </span>
-                        </div>
-
-                        <div class="summary-row">
-                            <span class="label">Academic Year</span>
-                            <span class="dash">-</span>
-                            <span
-                                class="value"><?php echo htmlspecialchars($enrollmentRecord['academic_year'] ?? $currentYear); ?></span>
-                        </div>
-
-                        <div class="summary-row">
-                            <span class="label">Status</span>
-                            <span class="dash">-</span>
-                            <span class="value">
-                                <span class="status-pill enrolled">
-                                    <i class="fas fa-circle-check"></i>
-                                    <?php echo htmlspecialchars($displayStatus ?: 'Enrolled'); ?>
-                                </span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- MY SUBJECTS -->
-                    <div class="subjects-section">
-                        <div class="subjects-head">
-                            <h3>
-                                <i class="fas fa-book-open"></i>
-                                My Subjects
-                            </h3>
-                            <span class="subjects-count">
-                                <?php echo count($studentSubjects); ?>
-                                subject<?php echo count($studentSubjects) === 1 ? '' : 's'; ?>
-                            </span>
-                        </div>
-
-                        <?php if (empty($studentSubjects)): ?>
-                            <div class="empty-subjects">
-                                <i class="fas fa-inbox"></i>
-                                <p>No subjects have been assigned yet. Please check back later.</p>
-                                <?php if ($subjectsFetchErr !== null): ?>
-                                    <span class="debug">Query error: <?php echo htmlspecialchars($subjectsFetchErr); ?></span>
-                                <?php elseif ($assignmentTable === null): ?>
-                                    <span class="debug">No assignment table found (`assigned_teachers` / `assinged_teachers`).</span>
-                                <?php elseif ($effectiveGrade === '' || $effectiveSection === ''): ?>
-                                    <span class="debug">Missing grade_level or section for this student.</span>
-                                <?php endif; ?>
+                    <?php if ($needsEnrollment): ?>
+                        <!-- ============================================
+                             NOT ENROLLED — inline CTA (no redirect)
+                             ============================================ -->
+                        <div class="not-enrolled-card">
+                            <div class="icon">
+                                <i class="fas fa-user-clock"></i>
                             </div>
-                        <?php else: ?>
-                            <div class="subjects-wrap">
-                                <table class="subjects">
-                                    <thead>
-                                        <tr>
-                                            <th>Subject</th>
-                                            <th>Adviser</th>
-                                            <th>Schedule</th>
-                                            <th>Time</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <?php foreach ($studentSubjects as $i => $s): ?>
-                                            <?php
-                                            $teacherFullName = resolveTeacherNameFromJoin($s);
+                            <h3>Hindi Ka Pa Naka-enroll</h3>
+                            <p>
+                                Wala pang enrollment record ang account mo para sa academic year
+                                <strong><?php echo htmlspecialchars($currentYear); ?></strong>.
+                                Mag-enroll ngayon para makita ang iyong mga subject at schedule.
+                            </p>
+                            <a href="student-enrollment.php" class="btn-enroll">
+                                <i class="fas fa-arrow-right-to-bracket"></i>
+                                Mag-enroll Ngayon
+                            </a>
+                        </div>
+                    <?php else: ?>
+                        <!-- ============================================
+                             ENROLLMENT DETAILS
+                             ============================================ -->
+                        <div class="enrolled-summary">
+                            <h3>Enrollment Details</h3>
 
-                                            $daysRaw = trim((string) ($s['days'] ?? ''));
-                                            $daysList = $daysRaw !== '' ? array_map('trim', explode(',', $daysRaw)) : [];
-                                            $daysShort = [];
+                            <div class="summary-row">
+                                <span class="label">Fullname</span>
+                                <span class="dash">-</span>
+                                <span class="value"><?php echo htmlspecialchars($displayName); ?></span>
+                            </div>
 
-                                            foreach ($daysList as $d) {
-                                                if ($d !== '') {
-                                                    $daysShort[] = formatDayShort($d);
-                                                }
-                                            }
+                            <div class="summary-row">
+                                <span class="label">Account Number</span>
+                                <span class="dash">-</span>
+                                <span class="value"><?php echo htmlspecialchars($user['account_number'] ?? '—'); ?></span>
+                            </div>
 
-                                            $daysDisplay = implode(', ', $daysShort);
+                            <div class="summary-row">
+                                <span class="label">Grade Level</span>
+                                <span class="dash">-</span>
+                                <span
+                                    class="value"><?php echo htmlspecialchars($effectiveGrade !== '' ? $effectiveGrade : ($user['grade_level'] ?? '—')); ?></span>
+                            </div>
 
-                                            $startTime = trim((string) ($s['start_time'] ?? ''));
-                                            $endTime = trim((string) ($s['end_time'] ?? ''));
+                            <div class="summary-row">
+                                <span class="label">Section</span>
+                                <span class="dash">-</span>
+                                <span
+                                    class="value"><?php echo htmlspecialchars($effectiveSection !== '' ? $effectiveSection : '—'); ?></span>
+                            </div>
 
-                                            $start12 = formatTime12h($startTime);
-                                            $end12 = formatTime12h($endTime);
+                            <div class="summary-row">
+                                <span class="label">Adviser</span>
+                                <span class="dash">-</span>
+                                <span class="value <?php echo $adviserName === '' ? 'muted-value' : ''; ?>">
+                                    <?php
+                                    if ($adviserName !== '') {
+                                        echo htmlspecialchars($adviserName);
+                                    } elseif ($adviserFetchErr !== null) {
+                                        echo 'Unable to load';
+                                    } else {
+                                        echo 'Not assigned yet';
+                                    }
+                                    ?>
+                                </span>
+                            </div>
 
-                                            $timeText = '';
-                                            if ($start12 !== '' || $end12 !== '') {
-                                                $timeText = $start12;
-                                                if ($start12 !== '' && $end12 !== '') {
-                                                    $timeText .= ' – ';
-                                                }
-                                                $timeText .= $end12;
-                                            }
-                                            if ($timeText === '') {
-                                                $timeText = '—';
-                                            }
-                                            ?>
-                                            <tr>
-                                                <td><?php echo htmlspecialchars($s['subject'] ?? '—'); ?></td>
-                                                <td title="<?php echo htmlspecialchars($teacherFullName); ?>">
-                                                    <?php echo htmlspecialchars($teacherFullName); ?>
-                                                </td>
-                                                <td title="<?php echo htmlspecialchars($daysRaw !== '' ? $daysRaw : '—'); ?>">
-                                                    <?php echo htmlspecialchars($daysDisplay !== '' ? $daysDisplay : '—'); ?>
-                                                </td>
-                                                <td title="<?php echo htmlspecialchars($timeText); ?>">
-                                                    <?php echo htmlspecialchars($timeText); ?>
-                                                </td>
-                                            </tr>
-                                        <?php endforeach; ?>
-                                    </tbody>
-                                </table>
+                            <div class="summary-row">
+                                <span class="label">Academic Year</span>
+                                <span class="dash">-</span>
+                                <span
+                                    class="value"><?php echo htmlspecialchars($enrollmentRecord['academic_year'] ?? $currentYear); ?></span>
+                            </div>
+
+                            <div class="summary-row">
+                                <span class="label">Status</span>
+                                <span class="dash">-</span>
+                                <span class="value">
+                                    <span class="status-pill enrolled">
+                                        <i class="fas fa-circle-check"></i>
+                                        <?php echo htmlspecialchars($displayStatus ?: 'Enrolled'); ?>
+                                    </span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <?php if (!empty($studentSubjects)): ?>
+                            <!-- ============================================
+                                 MY SUBJECTS
+                                 ============================================ -->
+                            <div class="subjects-section">
+                                <div class="subjects-head">
+                                    <span class="subjects-count">
+                                        My Subject<?php echo count($studentSubjects) === 1 ? '' : 's'; ?>
+                                    </span>
+                                </div>
+
+                                <div class="subjects-table-container">
+                                    <div class="subjects-wrap">
+                                        <table class="subjects">
+                                            <thead>
+                                                <tr>
+                                                    <th>Subject</th>
+                                                    <th>Adviser</th>
+                                                    <th>Schedule</th>
+                                                    <th>Time</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($studentSubjects as $i => $s): ?>
+                                                    <?php
+                                                    $teacherFullName = resolveTeacherNameFromJoin($s);
+
+                                                    $daysRaw = trim((string) ($s['days'] ?? ''));
+                                                    $daysList = $daysRaw !== '' ? array_map('trim', explode(',', $daysRaw)) : [];
+                                                    $daysShort = [];
+
+                                                    foreach ($daysList as $d) {
+                                                        if ($d !== '') {
+                                                            $daysShort[] = formatDayShort($d);
+                                                        }
+                                                    }
+
+                                                    $daysDisplay = implode(', ', $daysShort);
+
+                                                    $startTime = trim((string) ($s['start_time'] ?? ''));
+                                                    $endTime = trim((string) ($s['end_time'] ?? ''));
+
+                                                    $start12 = formatTime12h($startTime);
+                                                    $end12 = formatTime12h($endTime);
+
+                                                    $timeText = '';
+                                                    if ($start12 !== '' || $end12 !== '') {
+                                                        $timeText = $start12;
+                                                        if ($start12 !== '' && $end12 !== '') {
+                                                            $timeText .= ' – ';
+                                                        }
+                                                        $timeText .= $end12;
+                                                    }
+                                                    if ($timeText === '') {
+                                                        $timeText = '—';
+                                                    }
+                                                    ?>
+                                                    <tr>
+                                                        <td><?php echo htmlspecialchars($s['subject'] ?? '—'); ?></td>
+                                                        <td title="<?php echo htmlspecialchars($teacherFullName); ?>">
+                                                            <?php echo htmlspecialchars($teacherFullName); ?>
+                                                        </td>
+                                                        <td title="<?php echo htmlspecialchars($daysRaw !== '' ? $daysRaw : '—'); ?>">
+                                                            <?php echo htmlspecialchars($daysDisplay !== '' ? $daysDisplay : '—'); ?>
+                                                        </td>
+                                                        <td title="<?php echo htmlspecialchars($timeText); ?>">
+                                                            <?php echo htmlspecialchars($timeText); ?>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         <?php endif; ?>
-                    </div>
+
+                    <?php endif; ?>
 
                 </section>
             <?php endif; ?>
@@ -1555,7 +1683,61 @@ unset($_SESSION['flash']['just_enrolled']);
                 }, 500);
             }, 5000);
         }
+
+        /* ── DEVTOOLS DETECTION ── */
+        (function () {
+            'use strict';
+
+            let active = false;
+
+            function setActive(state) {
+                if (state === active) return;
+                active = state;
+                document.body.classList.toggle('devtools-active', state);
+            }
+
+            function detectByDebugger() {
+                const t0 = performance.now();
+                // eslint-disable-next-line no-debugger
+                debugger;
+                const t1 = performance.now();
+                return (t1 - t0) > 100;
+            }
+
+            function detectBySize() {
+                const w = window.outerWidth - window.innerWidth;
+                const h = window.outerHeight - window.innerHeight;
+                if (window.outerWidth === 0 && window.outerHeight === 0) return false;
+                return (w > 160 || h > 160);
+            }
+
+            function tick() {
+                setActive(detectByDebugger() || detectBySize());
+            }
+
+            tick();
+
+            let resizeTimer = null;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(tick, 150);
+            });
+
+            setInterval(tick, 800);
+
+            document.addEventListener('keydown', (e) => {
+                const k = (e.key || '').toLowerCase();
+                if (
+                    e.key === 'F12' ||
+                    (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(k)) ||
+                    (e.metaKey && e.altKey && ['i', 'j', 'c'].includes(k))
+                ) {
+                    setTimeout(tick, 200);
+                }
+            }, true);
+        })();
     </script>
+
 </body>
 
 </html>

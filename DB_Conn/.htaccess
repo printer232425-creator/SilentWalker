@@ -1,0 +1,2 @@
+# DB credentials live here — never serve over HTTP
+Require all denied

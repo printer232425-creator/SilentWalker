@@ -1,0 +1,13 @@
+# Deny everything by default
+Require all denied
+
+# Allow only the public endpoints
+<Files "login.php">
+    Require all granted
+</Files>
+<Files "register_student.php">
+    Require all granted
+</Files>
+<Files "register_teacher.php">
+    Require all granted
+</Files>

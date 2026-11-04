@@ -1,0 +1,42 @@
+project-root/
+│
+├── index.php                          # Public landing page / entry point
+│
+├── DB_Conn/
+│   └── config.php                     # PDO connection + shared helpers
+│
+├── SQL/
+│   └── schema.sql                     # Database schema (students, teachers, schools, system_updates, …)
+│
+├── Images/
+│   └── profile-image.jpg              # Default profile image
+│
+├── assets/
+│   ├── css/
+│   │   └── style.css                  # Global stylesheet
+│   └── images/                        # All UI images (icons, logos, illustrations)
+│       ├── logo.png
+│       ├── background.jpg
+│       └── ...
+│
+│
+├── API_STUDENT/
+│   ├── all_backends.php               # Student backend aggregator / router
+│   └── auth.php                       # Student-specific auth helpers
+│
+├── API_TEACHER/
+│   ├── all_backends.php               # Teacher backend aggregator / router
+│   └── auth.php                       # Teacher-specific auth helpers
+│
+├── API_SYSTEM/
+│   ├── auth.php                       # Shared auth (sessions, CSRF, rate limit, cookies)
+│   ├── login.php                      # Login endpoint (all roles)
+│   ├── register_student.php           # Student registration endpoint
+│   └── register_teacher.php           # Teacher registration endpoint
+│
+├── Students_Profile/
+│   ├── students_pages.php             # Student profile page
+│   └── student_pages.php              # Student dashboard / related pages
+│
+└── teacher/
+    └── teachers_pages.php             # Teacher dashboard / profile page

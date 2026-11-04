@@ -1,0 +1,65 @@
+# ============================================================
+# Root .htaccess — no listing + hardening + pretty page URLs
+# ============================================================
+
+# ---- Disable directory listing globally ----
+Options -Indexes
+
+# ---- Ensure index.php is served at the root ----
+DirectoryIndex index.php index.html
+
+# ---- Block access to dotfiles ----
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# ---- Block backup / temp / editor / SQL dump files ----
+<FilesMatch "\.(bak|old|orig|swp|swo|tmp|log|sql|sh|ini|env)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "(^#.*#|~)$">
+    Require all denied
+</FilesMatch>
+
+# ---- Block composer/npm metadata ----
+<FilesMatch "^(composer\.(json|lock)|package(-lock)?\.json|yarn\.lock|\.gitignore|\.editorconfig)$">
+    Require all denied
+</FilesMatch>
+
+# ---- Default charset ----
+AddDefaultCharset UTF-8
+
+# ---- Baseline security headers ----
+<IfModule mod_headers.c>
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-Frame-Options "SAMEORIGIN"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# ============================================================
+# Rewrite engine — uploads guard + pretty page URLs
+# ============================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # ---- Never execute PHP inside uploads/ ----
+    RewriteRule ^uploads/.*\.(php|phtml|phar)$ - [F,L]
+
+    # ---- Pretty URLs for page folders only ----
+
+    # /students/<name>  ->  /Students_Profile/<name>.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^students/([a-z0-9_-]+)/?$ Students_Profile/$1.php [L,QSA]
+
+    # /teacher/<name>   ->  /teacher/<name>.php
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^teacher/([a-z0-9_-]+)/?$ teacher/$1.php [L,QSA]
+</IfModule>
+
+# ---- Custom error pages ----
+ErrorDocument 403 /error_type/403.php
+ErrorDocument 404 /error_type/404.php
+ErrorDocument 500 /error_type/500.php

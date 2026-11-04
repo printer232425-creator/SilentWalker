@@ -1,0 +1,7 @@
+# Deny everything by default
+Require all denied
+
+# Allow only the router
+<Files "all_backends.php">
+    Require all granted
+</Files>

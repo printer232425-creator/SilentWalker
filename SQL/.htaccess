@@ -1,0 +1,2 @@
+# Schema + seed dumps — never serve over HTTP
+Require all denied

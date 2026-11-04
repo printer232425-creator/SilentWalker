@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DepEd Enrollment Forms</title>
+    <style>
+        /* General Reset and Typography */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 11px;
+            color: #000;
+            background-color: #f0f0f0;
+            padding: 20px;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .page {
+            background-color: #fff;
+            width: 215mm;
+            /* Slightly wider to accommodate margins */
+            min-height: 297mm;
+            margin: 0 auto 30px auto;
+            padding: 15mm;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            position: relative;
+        }
+
+        /* Typography Helpers */
+        .bold {
+            font-weight: bold;
+        }
+
+        .italic {
+            font-style: italic;
+        }
+
+        .uppercase {
+            text-transform: uppercase;
+        }
+
+        .text-center {
+            text-align: center;
+        }
+
+        /* Form Elements */
+        input[type="text"],
+        .box {
+            border: 1px solid #000;
+            height: 20px;
+            width: 100%;
+            display: block;
+            font-family: inherit;
+            font-size: 12px;
+            padding: 0 2px;
+            text-transform: uppercase;
+        }
+
+        .checkbox {
+            width: 11px;
+            height: 11px;
+            border: 1px solid #000;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 3px;
+            background-color: #fff;
+        }
+
+        /* --- PAGE 1: PREFERRED MODALITY --- */
+        .modality-outer-box {
+            border: 2px solid #000;
+            padding: 25px;
+            margin-top: 20px;
+        }
+
+        .modality-header {
+            background-color: #d9d9d9;
+            /* Grey background */
+            border-top: 2px solid #000;
+            border-bottom: 2px solid #000;
+            text-align: center;
+            font-weight: bold;
+            padding: 3px 0;
+            margin-bottom: 15px;
+            font-size: 12px;
+        }
+
+        .instruction {
+            font-size: 11px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px 10px;
+            margin-bottom: 40px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            font-size: 11px;
+        }
+
+        .privacy-text {
+            font-size: 10px;
+            text-align: justify;
+            margin-bottom: 40px;
+            line-height: 1.4;
+            padding: 0 10px;
+        }
+
+        .signature-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            padding: 0 20px;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 45%;
+        }
+
+        .signature-line {
+            border-bottom: 1px solid #000;
+            height: 20px;
+            margin-bottom: 5px;
+        }
+
+        .signature-label {
+            font-weight: bold;
+            font-size: 11px;
+        }
+
+        /* --- PAGE 2: ENROLLMENT FORM --- */
+
+        /* Header */
+        .header-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .logo-area {
+            width: 80px;
+            font-size: 7px;
+            text-align: center;
+            font-weight: bold;
+            line-height: 1.1;
+            padding-top: 5px;
+        }
+
+        .logo-circle {
+            width: 60px;
+            height: 60px;
+            border: 1px solid #000;
+            border-radius: 50%;
+            margin: 0 auto 3px auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 6px;
+        }
+
+        .title-area {
+            text-align: center;
+            flex-grow: 1;
+        }
+
+        .title-area h1 {
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            margin-bottom: 2px;
+        }
+
+        .title-area p {
+            font-size: 9px;
+        }
+
+        .annex-tag {
+            border: 1px solid #000;
+            padding: 3px 15px;
+            font-weight: bold;
+            font-size: 11px;
+            align-self: flex-start;
+        }
+
+        /* Top Info Section */
+        .top-info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+
+        .sy-section {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .sy-inputs {
+            display: flex;
+            align-items: flex-end;
+            gap: 5px;
+            font-weight: bold;
+        }
+
+        .square-input {
+            width: 22px;
+            height: 22px;
+            border: 1px solid #000;
+            display: inline-block;
+            text-align: center;
+            line-height: 22px;
+        }
+
+        .check-box-group {
+            border: 1px solid #000;
+            padding: 5px 15px;
+        }
+
+        .check-box-group .title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .check-row {
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+        }
+
+        .instructions {
+            font-size: 10px;
+            margin-bottom: 15px;
+            text-align: justify;
+        }
+
+        .instructions .title {
+            font-weight: bold;
+            font-style: italic;
+        }
+
+        /* Section Headers */
+        .section-bar {
+            background-color: #d9d9d9;
+            border: 1px solid #000;
+            text-align: center;
+            font-weight: bold;
+            padding: 4px 0;
+            margin-top: 15px;
+            margin-bottom: 10px;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .section-bar-left {
+            text-align: left;
+            padding-left: 10px;
+        }
+
+        /* Layout Grids */
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 10px;
+            align-items: flex-end;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .field-group label {
+            font-size: 10px;
+        }
+
+        /* Specific Character Boxes (The small squares) */
+        .char-box-container {
+            display: flex;
+            border: 1px solid #000;
+            height: 22px;
+            background-color: #fff;
+        }
+
+        .char-box {
+            flex: 1;
+            border-right: 1px solid #000;
+        }
+
+        .char-box:last-child {
+            border-right: none;
+        }
+
+        /* Address Grid */
+        .address-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .address-grid-row2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 0.5fr 0.5fr;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        /* Parents Info */
+        .parents-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .parents-label {
+            font-size: 10px;
+            margin-bottom: 2px;
+        }
+
+        /* Returning Learner */
+        .returning-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+        }
+
+        /* SHS Section */
+        .shs-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 2fr;
+            gap: 20px;
+            align-items: flex-end;
+            margin-bottom: 10px;
+        }
+
+        .line-input {
+            border-bottom: 1px solid #000;
+            height: 20px;
+            width: 100%;
+        }
+
+        /* Print Media */
+        @media print {
+            body {
+                background: none;
+                padding: 0;
+            }
+
+            .page {
+                box-shadow: none;
+                margin: 0;
+                padding: 10mm;
+                width: 100%;
+                height: auto;
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- PAGE 2: ENHANCED BASIC EDUCATION ENROLLMENT FORM -->
+    <div class="page">
+
+        <div class="header-area">
+            <div class="logo-area">
+                <div class="logo-circle">DepEd Logo</div>
+                KAGAWARAN NG EDUKASYON<br>REPUBLIKA NG PILIPINAS
+            </div>
+
+            <div class="title-area">
+                <h1 class="bold">ENHANCED BASIC EDUCATION ENROLLMENT FORM</h1>
+                <p>THIS FORM IS NOT FOR SALE.</p>
+            </div>
+
+            <div class="annex-tag">ANNEX 1</div>
+        </div>
+
+        <div class="top-info-row">
+            <div class="sy-section">
+                <div class="sy-inputs">
+                    School Year
+                    <span class="square-input"></span> <span class="square-input"></span> <span class="square-input"></span> <span class="square-input"></span> - <span class="square-input"></span><span class="square-input"></span> <span class="square-input"></span> <span class="square-input"></span> 
+                </div>
+                <div class="sy-inputs">
+                    Grade level to Enroll: <span class="square-input"></span><span class="square-input"></span> 
+                </div>
+            </div>
+
+            <div class="check-box-group">
+                <div class="title">Check the appropriate box only</div>
+                <div class="check-row">
+                    <div>1. With LRN? &nbsp; <span class="checkbox"></span> Yes &nbsp;&nbsp; <span
+                            class="checkbox"></span> No</div>
+                    <div>2. Returning (Balik-Aral) &nbsp; <span class="checkbox"></span> Yes &nbsp;&nbsp; <span
+                            class="checkbox"></span> No</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <span class="title">INSTRUCTIONS:</span><br>
+            <span class="italic">Print legibly all information required in CAPITAL letters. Submit accomplished form to
+                the Person-in-Charge/Registrar/Class Adviser. Use black or blue pen only.</span>
+        </div>
+
+        <!-- LEARNER INFORMATION -->
+        <div class="section-bar">Learner Information</div>
+
+        <div class="form-row">
+            <div class="field-group" style="flex: 2;">
+                <label>PSA Birth Certificate No. (if available upon registration)_____________________</label>
+            </div>
+            <div class="field-group" style="flex: 1.5;">
+                <label>Learner Reference No. (LRN)</label>
+                <div class="char-box-container">
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 1: Last Name, Birthdate, Place of Birth -->
+        <div class="form-row">
+            <div class="field-group" style="flex: 1.5;">
+                <label>Last Name</label>
+                <div class="char-box-container">
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                </div>
+            </div>
+            <div class="field-group" style="flex: 1;">
+                <label>Birthdate (mm/dd/yyyy)</label>
+                <div class="char-box-container">
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                </div>
+            </div>
+            <div class="field-group" style="flex: 1.2;">
+                <label>Place of Birth (Municipality/City)</label>
+                <div class="box"></div>
+            </div>
+        </div>
+
+        <!-- Row 2: First Name, Sex, Age, Mother Tongue -->
+        <div class="form-row">
+            <div class="field-group" style="flex: 1.5;">
+                <label>First Name</label>
+                <div class="char-box-container">
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                </div>
+            </div>
+            
+            <!-- MODIFIED SEX FIELD TO MATCH IMAGE (Box with stacked checkboxes) -->
+            <div class="field-group" style="flex: 0.6;">
+                <label>Sex</label>
+                <div class="box" style="height: 34px; display: flex; flex-direction: column; justify-content: center; padding: 2px 5px; gap: 2px;">
+                    <span style="font-size: 10px; display: flex; align-items: center;"><span class="checkbox" style="width:9px;height:9px;"></span> Male</span>
+                    <span style="font-size: 10px; display: flex; align-items: center;"><span class="checkbox" style="width:9px;height:9px;"></span> Female</span>
+                </div>
+            </div>
+            
+            <!-- MODIFIED AGE FIELD TO MATCH IMAGE (Standard box, same height as Sex) -->
+            <div class="field-group" style="flex: 0.3;">
+                <label>Age</label>
+                <div class="box" style="height: 34px;"></div>
+            </div>
+            
+            <div class="field-group" style="flex: 1.2;">
+                <label>Mother Tongue</label>
+                <div class="box" style="height: 34px;"></div>
+            </div>
+        </div>
+
+        <!-- Row 3: Middle Name, IP Community -->
+        <div class="form-row">
+            <div class="field-group" style="flex: 1.5;">
+                <label>Middle Name</label>
+                <div class="char-box-container">
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                </div>
+            </div>
+            <div class="field-group" style="flex: 2.4;">
+                <label>Belonging to any Indigenous Peoples (IP) Community/Indigenous Cultural Community?</label>
+                <div style="display: flex; align-items: flex-end; height: 22px; gap: 10px;">
+                    <div class="checkbox-item"><span class="checkbox"></span> Yes</div>
+                    <div class="checkbox-item"><span class="checkbox"></span> No</div>
+                    <div style="flex-grow: 1; display: flex; gap: 5px; align-items: flex-end;">
+                        <span style="font-size: 10px; white-space: nowrap;">If Yes, please specify:</span>
+                        <div class="box"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Row 4: Extension Name, 4Ps -->
+        <div class="form-row">
+            <div class="field-group" style="flex: 1.5;">
+                <label>Extension Name e.g. Jr., III (if applicable)</label>
+                <div class="char-box-container">
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                </div>
+            </div>
+            <div class="field-group" style="flex: 2.4;">
+                <div style="display: flex; align-items: center; gap: 10px; height: 22px;">
+                    <span>Is your family a beneficiary of 4Ps?</span>
+                    <div class="checkbox-item"><span class="checkbox"></span> Yes</div>
+                    <div class="checkbox-item"><span class="checkbox"></span> No</div>
+                </div>
+                <div style="display: flex; align-items: flex-end; gap: 10px; margin-top: 5px;">
+                    <span class="italic" style="font-size: 10px; white-space: nowrap; padding-bottom: 2px;">If Yes,
+                        write the 4Ps Household ID Number below</span>
+                </div>
+                <div class="char-box-container" style="margin-top: 2px;">
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                    <div class="char-box"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CURRENT ADDRESS -->
+        <div class="section-bar section-bar-left">Current Address</div>
+
+        <div class="address-grid">
+            <div class="field-group"><label>House No./Street</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Street Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Barangay</label>
+                <div class="box"></div>
+            </div>
+        </div>
+
+        <div class="address-grid-row2">
+            <div class="field-group"><label>Municipality/City</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Province</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Country</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Zip Code</label>
+                <div class="box"></div>
+            </div>
+        </div>
+
+        <!-- PERMANENT ADDRESS -->
+        <div class="section-bar section-bar-left"
+            style="display: flex; justify-content: space-between; padding-right: 15px;">
+            <span>Permanent Address</span>
+            <span
+                style="font-weight: normal; font-style: italic; font-size: 10px; display: flex; align-items: center; gap: 5px;">
+                Same with your Current Address?
+                <span class="checkbox-item"><span class="checkbox" style="background:#fff;"></span> Yes</span>
+                <span class="checkbox-item"><span class="checkbox" style="background:#fff;"></span> No</span>
+            </span>
+        </div>
+
+        <div class="address-grid">
+            <div class="field-group"><label>House No./Street</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Street Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Barangay</label>
+                <div class="box"></div>
+            </div>
+        </div>
+
+        <div class="address-grid-row2">
+            <div class="field-group"><label>Municipality/City</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Province</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Country</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Zip Code</label>
+                <div class="box"></div>
+            </div>
+        </div>
+
+    
+
+        <!-- PARENT'S/GUARDIAN'S INFORMATION -->
+        <div class="section-bar">Parent's/Guardian's Information</div>
+
+        <div class="parents-label">Father's Name</div>
+        <div class="parents-grid">
+            <div class="field-group"><label>Last Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>First Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Middle Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Contact Number</label>
+                <div class="box"></div>
+            </div>
+        </div>
+
+        <div class="parents-label">Mother's Maiden Name</div>
+        <div class="parents-grid">
+            <div class="field-group"><label>Last Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>First Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Middle Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Contact Number</label>
+                <div class="box"></div>
+            </div>
+        </div>
+
+        <div class="parents-label">Guardian's Name</div>
+        <div class="parents-grid">
+            <div class="field-group"><label>Last Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>First Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Middle Name</label>
+                <div class="box"></div>
+            </div>
+            <div class="field-group"><label>Contact Number</label>
+                <div class="box"></div>
+            </div>
+        </div>
+
+        <!-- RETURNING LEARNER -->
+        <div class="section-bar" style="font-size: 10px;">For Returning Learner (Balik-Aral) and Those Who will
+            Transfer/Move In</div>
+
+        <div class="returning-grid">
+            <div class="form-row">
+                <div class="field-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px;">
+                    <label>Last Grade Level Completed</label>
+                    <div class="box" style="flex: 1;"></div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px;">
+                    <label>Last School Year Completed</label>
+                    <div class="box" style="flex: 1;"></div>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field-group" style="flex: 1; flex-direction: row; align-items: center; gap: 10px;">
+                    <label>Last School Attended</label>
+                    <div class="box" style="flex: 1;"></div>
+                </div>
+            </div>
+            <div class="form-row" style="justify-content: flex-end;">
+                <div class="field-group" style="flex-direction: row; align-items: center; gap: 10px;">
+                    <label>School ID</label>
+                    <div class="char-box-container" style="width: 120px;">
+                        <div class="char-box"></div>
+                        <div class="char-box"></div>
+                        <div class="char-box"></div>
+                        <div class="char-box"></div>
+                        <div class="char-box"></div>
+                        <div class="char-box"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- SENIOR HIGH SCHOOL -->
+        <div class="section-bar" style="font-size: 10px;">For Learners in Senior High School</div>
+
+        <div class="shs-grid">
+            <div class="field-group" style="flex-direction: row; align-items: center; gap: 15px;">
+                <label class="bold">Semester</label>
+                <div class="checkbox-item"><span class="checkbox"></span> 1st Sem</div>
+                <div class="checkbox-item"><span class="checkbox"></span> 2nd Sem</div>
+            </div>
+
+            <div class="field-group" style="flex-direction: row; align-items: flex-end; gap: 10px;">
+                <label class="bold" style="white-space: nowrap; padding-bottom: 2px;">Track</label>
+                <div class="line-input"></div>
+            </div>
+
+            <div class="field-group" style="flex-direction: row; align-items: flex-end; gap: 10px;">
+                <label class="bold" style="white-space: nowrap; padding-bottom: 2px;">Strand</label>
+                <div class="line-input"></div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- PAGE 1: PREFERRED MODALITY -->
+    <div class="page">
+        <div class="modality-outer-box">
+            <div class="modality-header">
+                Preferred Distance Learning Modality/ies
+            </div>
+
+            <div class="instruction bold">Choose all that applies.</div>
+
+            <div class="checkbox-grid">
+                <div class="checkbox-item"><span class="checkbox"></span> Modular (Print)</div>
+                <div class="checkbox-item"><span class="checkbox"></span> Online</div>
+                <div class="checkbox-item"><span class="checkbox"></span> Radio-Based Instruction</div>
+                <div class="checkbox-item"><span class="checkbox"></span> Blended</div>
+                <div class="checkbox-item"><span class="checkbox"></span> Modular (Digital)</div>
+                <div class="checkbox-item"><span class="checkbox"></span> Educational Television</div>
+                <div class="checkbox-item"><span class="checkbox"></span> Homeschooling</div>
+                <div class="checkbox-item"><span class="checkbox"></span> Face to Face</div>
+            </div>
+
+            <div class="privacy-text italic">
+                I hereby certify that the above information given are true and correct to the best of my knowledge and I
+                allow the Department of Education to use my child's details to create and/or update his/her learner
+                profile in the Learner Information System. The information herein shall be treated as confidential in
+                compliance with the Data Privacy Act of 2012.
+            </div>
+
+            <div class="signature-row">
+                <div class="signature-box">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Signature Over Printed Name of Parent/Guardian</div>
+                </div>
+                <div class="signature-box" style="width: 30%;">
+                    <div class="signature-line"></div>
+                    <div class="signature-label">Date</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+</body>
+
+</html>
